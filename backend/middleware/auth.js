@@ -7,17 +7,13 @@ if (!jwtSecret) {
 }
 
 export default function requireAuth(req, res, next) {
-  const authorization = req.get('authorization');
-  const match = authorization?.match(/^Bearer\s+(.+)$/i);
-
-  if (!match) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const token = req.cookies.access_token || req.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return res.status(401).json({ error: 'Please sign in to continue.' });
 
   try {
-    req.auth = jwt.verify(match[1], jwtSecret, { algorithms: ['HS256'] });
+    req.auth = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] });
     return next();
   } catch {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Your session has expired. Please sign in again.' });
   }
 }

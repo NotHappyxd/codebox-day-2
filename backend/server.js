@@ -1,44 +1,31 @@
 import 'dotenv/config';
 import express from 'express';
-import requireAuth from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import healthRoute from "./routes/health.js";
-import { getUsers } from './services/userService.js';
+import todoRoutes from './routes/todos.js';
+import requireAuth from './middleware/auth.js';
+import cookieParser from 'cookie-parser';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { connectDatabase } from './services/database.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 app.use(express.json());
-
-app.get('/', (_req, res) => {
-  res.send('Hello from CodeBox!');
+app.use(cookieParser());
+app.use((req, res, next) => {
+  if (['GET', 'POST', 'PATCH'].includes(req.method)) res.set('Cache-Control', 'no-store');
+  next();
 });
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/v1/todos', requireAuth, todoRoutes);
+app.get('/api/v1/me', requireAuth, (req, res) => res.json({ user: { id: req.auth.sub, name: req.auth.name, email: req.auth.email } }));
+app.use(express.static(path.join(root, 'dist')));
+app.use((_req, res) => res.sendFile(path.join(root, 'dist', 'index.html')));
 
-app.use('/api/v1/health', healthRoute);
-
-app.get('/api/v1/test/users', (req, res) => {
-  const search = typeof req.query.search === 'string'
-    ? req.query.search.trim().toLowerCase()
-    : '';
-  const users = getUsers().filter((user) =>
-    !search || user.name.toLowerCase().includes(search),
-  );
-
-  res.json({ count: users.length, users });
-});
-
-app.get('/api/me', requireAuth, (_req, res) => {
-  res.json({
-    id: 1,
-    name: 'Alex',
-    email: 'alex@example.com',
-  });
-});
-
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`);
+connectDatabase().then(() => app.listen(port, () => console.log(`Taskstack is running at http://localhost:${port}`))).catch((error) => {
+  console.error('Unable to connect to MongoDB:', error.message); process.exit(1);
 });

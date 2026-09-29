@@ -1,0 +1,15 @@
+.modal-backdrop{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:rgb(18 18 18 / .52)}
+.modal{width:min(520px,100%);grid-template-columns:1fr;margin:0;box-shadow:9px 9px 0 var(--ink);position:relative}
+.modal h2{font-family:'Archivo Black';font-size:2.3rem;letter-spacing:-.05em;margin:0}
+.close{position:absolute;right:10px;top:7px;border:0;background:none;font-size:2rem;line-height:1}
+.drag-origin{visibility:hidden}
+.drag-card{position:fixed;z-index:20;margin:0;pointer-events:none;cursor:grabbing;transform:rotate(1.25deg);box-shadow:8px 8px 0 var(--ink);will-change:left,top}
+body.is-dragging,body.is-dragging *{user-select:none;-webkit-user-select:none;cursor:grabbing}
+.task h3,.task p{overflow-wrap:anywhere}
+@media (pointer:coarse){
+  .move{width:44px;height:44px;right:6px;top:6px}
+  .task h3{margin-inline-end:52px}
+  .edit{min-width:44px;min-height:44px;text-align:start}
+  .outline{min-height:44px}
+  .board{padding-block-end:max(16px,env(safe-area-inset-bottom))}
+}
