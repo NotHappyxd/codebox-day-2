@@ -27,7 +27,10 @@ router.post('/register', async (req, res, next) => {
     if (await User.exists({ email })) return res.status(409).json({ error: 'An account with that email already exists.' });
     const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
     session(res, user); return res.status(201).json({ user: toUser(user) });
-  } catch (error) { return next(error); }
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ error: 'An account with that email already exists.' });
+    return next(error);
+  }
 });
 router.post('/login', async (req, res, next) => {
   try {

@@ -6,12 +6,12 @@ const authValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth.value.em
 const dragging = ref(null);
 function onKeydown(event) { if (event.key === 'Escape' && adding.value) adding.value = false; }
 const columns = [{ id: 'backlog', label: 'Backlog', color: 'yellow' }, { id: 'in-progress', label: 'In progress', color: 'coral' }, { id: 'done', label: 'Done', color: 'blue' }];
-const api = async (url, options = {}) => { const r = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options }); const data = r.status === 204 ? null : await r.json(); if (!r.ok) throw new Error(data.error || 'Something went wrong.'); return data; };
+const api = async (url, options = {}) => { const r = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options }); const data = r.status === 204 ? null : await r.json().catch(() => ({})); if (!r.ok) { const error = new Error(data.error || 'The server returned an unexpected response.'); error.status = r.status; throw error; } return data; };
 const tasks = (status) => todos.value.filter((todo) => todo.status === status).sort((a,b) => a.order - b.order);
-async function load() { try { user.value = (await api('/api/v1/me')).user; todos.value = (await api('/api/v1/todos')).todos; } catch { user.value = null; } finally { loading.value = false; } }
+async function load() { try { user.value = (await api('/api/v1/me')).user; todos.value = (await api('/api/v1/todos')).todos; } catch (e) { user.value = null; if (e.status !== 401) error.value = 'Unable to reach your board. Check the server and try again.'; } finally { loading.value = false; } }
 async function submitAuth() { error.value = ''; try { const path = authMode.value === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register'; user.value = (await api(path, { method: 'POST', body: JSON.stringify(auth.value) })).user; await load(); } catch (e) { error.value = e.message; } }
 async function createTodo() { if (!draft.value.title.trim()) return; try { const { todo } = await api('/api/v1/todos', { method: 'POST', body: JSON.stringify(draft.value) }); todos.value.push(todo); draft.value = { title: '', description: '', status: 'backlog' }; adding.value = false; } catch (e) { error.value = e.message; } }
-async function update(todo, changes) { try { const { todo: saved } = await api(`/api/v1/todos/${todo.id}`, { method: 'PATCH', body: JSON.stringify(changes) }); todos.value = todos.value.map((t) => t.id === saved.id ? saved : t); } catch (e) { error.value = e.message; } }
+async function update(todo, changes) { try { const { todo: saved } = await api(`/api/v1/todos/${todo.id}`, { method: 'PATCH', body: JSON.stringify(changes) }); todos.value = todos.value.map((t) => t.id === saved.id ? saved : t); } catch (e) { error.value = e.message; try { todos.value = (await api('/api/v1/todos')).todos; } catch {} } }
 async function drop(event, status) { const id = event.dataTransfer.getData('text/plain'); const todo = todos.value.find((t) => t.id === id); if (todo && todo.status !== status) await update(todo, { status, order: tasks(status).length }); }
 function movePointer(event) { if (dragging.value) { dragging.value.x = event.clientX; dragging.value.y = event.clientY; } }
 async function endPointerDrag(event) {
@@ -30,7 +30,7 @@ function startPointerDrag(event, todo) {
   window.addEventListener('pointermove', movePointer); window.addEventListener('pointerup', endPointerDrag, { once: true });
 }
 onBeforeUnmount(() => { document.body.classList.remove('is-dragging'); window.removeEventListener('pointermove', movePointer); window.removeEventListener('pointerup', endPointerDrag); });
-async function logout() { await api('/api/v1/auth/logout', { method: 'POST' }); user.value = null; todos.value = []; }
+async function logout() { try { await api('/api/v1/auth/logout', { method: 'POST' }); user.value = null; todos.value = []; } catch (e) { error.value = e.message; } }
 onMounted(() => { window.addEventListener('keydown', onKeydown); load(); });
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>

@@ -9,7 +9,7 @@ router.post('/', async (req, res, next) => { try {
   const todo = await Todo.create({ ownerId: req.auth.sub, title, description, status, order: await Todo.countDocuments({ ownerId: req.auth.sub, status }) }); return res.status(201).json({ todo: output(todo) });
 } catch (error) { next(error); } });
 router.patch('/:id', async (req, res, next) => { try {
-  const update = {}; if (typeof req.body?.title === 'string' && req.body.title.trim()) update.title = req.body.title.trim(); if (typeof req.body?.description === 'string') update.description = req.body.description.trim(); if (statuses.has(req.body?.status)) update.status = req.body.status; if (Number.isFinite(req.body?.order)) update.order = req.body.order;
+  const update = {}; if (typeof req.body?.title === 'string' && req.body.title.trim()) update.title = req.body.title.trim(); if (typeof req.body?.description === 'string') update.description = req.body.description.trim(); if (statuses.has(req.body?.status)) { update.status = req.body.status; update.order = Date.now() + Math.random(); }
   const todo = await Todo.findOneAndUpdate({ _id: req.params.id, ownerId: req.auth.sub }, update, { returnDocument: 'after', runValidators: true }); if (!todo) return res.status(404).json({ error: 'Task not found.' }); return res.json({ todo: output(todo) });
 } catch (error) { next(error); } });
 export default router;

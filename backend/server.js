@@ -23,6 +23,11 @@ app.use('/api/v1/auth', authRoutes);
 app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/v1/todos', requireAuth, todoRoutes);
 app.get('/api/v1/me', requireAuth, (req, res) => res.json({ user: { id: req.auth.sub, name: req.auth.name, email: req.auth.email } }));
+app.use('/api', (error, _req, res, _next) => {
+  console.error(error);
+  if (error.name === 'CastError') return res.status(400).json({ error: 'Invalid request identifier.' });
+  return res.status(500).json({ error: 'Something went wrong. Please try again.' });
+});
 app.use(express.static(path.join(root, 'dist')));
 app.use((_req, res) => res.sendFile(path.join(root, 'dist', 'index.html')));
 

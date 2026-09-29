@@ -1,0 +1,9 @@
+.git
+.devenv
+.direnv
+node_modules
+dist
+.env
+.env.*
+npm-debug.log*
+PRODUCT.md
