@@ -2,6 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import { issueProofOfWork, verifyAndConsumeProofOfWork } from '../services/proofOfWork.js';
 
 const jwtSecret = process.env.JWT_SECRET;
 
@@ -20,10 +21,13 @@ function credentials(body) {
   return { name: typeof body?.name === 'string' ? body.name.trim() : '', email: typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '', password: typeof body?.password === 'string' ? body.password : '' };
 }
 
+router.post('/registration-proof', (req, res) => res.json(issueProofOfWork(req)));
 router.post('/register', async (req, res, next) => {
   try {
     const { name, email, password } = credentials(req.body);
     if (!name || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return res.status(400).json({ error: 'Use a name, valid email, and password of at least 8 characters.' });
+    const proof = verifyAndConsumeProofOfWork(req, req.body?.proof);
+    if (!proof.ok) return res.status(400).json({ error: proof.error });
     if (await User.exists({ email })) return res.status(409).json({ error: 'An account with that email already exists.' });
     const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
     session(res, user); return res.status(201).json({ user: toUser(user) });
